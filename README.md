@@ -6,8 +6,11 @@ This image relies on two main variables for clustering: `CLUSTER_NAME` and `CLUS
 
 ## Environment variables
 
-* `CLUSTER_NAME` - You should give a name to your cluster and place it here. If this environment variable is empty, `RUNNING_MODE` will default on `standalone`.
-  - Defaults to ` ` (empty string).
+* `CLUSTER_NAME` - You should give a name to your cluster and place it here.
+
+
+* `RUNNING_MODE` - This variable could be set with values: `cluster` and `standalone`.
+  - Defaults to `cluster` if `CLUSTER_NAME` is set and non-empty, otherwise it will always default to `cluster`.
 
 
 * `CLUSTER_HOSTS` - Here you should place a cluster fqdn or IP plus port, separated.
@@ -17,20 +20,21 @@ This image relies on two main variables for clustering: `CLUSTER_NAME` and `CLUS
     - `10.0.0.10:4423,10.0.0.11:4423,10.0.0.12:4423`
     - `local.skydns.redis.clustername:1234`
 
+
 * `CLUSTER_CONNECT_TIMEOUT` - seconds it should wait for each host before elects itself as the first one on the cluster.
   - Defaults to `5`.
+
 
 * `CLUSTER_REPLICAS` - number of replica servers
   - Defaults to `1`.
 
+
 * `PORT` - port where redis should be listening on.
   - Defaults to `6379`.
 
+
 * `LOG_LEVEL` - log level to be specified on servers configs.
   - Defaults to `notice`;
-
-* `RUNNING_MODE` - This variable could be set with values: `cluster` and `standalone`.
-  - Defaults to `cluster` if `CLUSTER_NAME` is not empty, otherwise it will always default to `cluster`.
 
 
 ## Container startup explained
@@ -66,7 +70,7 @@ fleetctl launch redis@gitlab:3;
 fleetctl launch redis@gitlab:4;
 
 # Now, if your dig your domain, it should return all instances:
-dig local.skydns.redis.gitlab;
+dig @sky.dns.srv.ip gitlab.redis.skydns.local;
 
 ```
 
