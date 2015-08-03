@@ -1,0 +1,63 @@
+[Unit]
+Description=redis@%i
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+RestartSec=10s
+
+EnvironmentFile=/etc/environment
+Environment="DOMAIN_BASE=.redis.skydns.local"
+Environment="DOMAIN_BASE_ETCD=/skydns/local/skydns/redis/"
+Environment="IMAGE=cusspvz/redis"
+Environment="TAG=latest"
+Environment="REDIS_SERVER_PORT=6379"
+
+ExecStartPre=/usr/bin/docker pull ${IMAGE}
+ExecStart=/bin/bash -ec "\
+    I=%i; \
+    DASHED_I=$(echo $I | tr ':' '-'); \
+    SLASHED_I=$(echo $I | tr ':' '/'); \
+    CLUSTER=$(echo $I | cut -d ':' -f 1); \
+\
+    echo checking redis-$DASHED_I...; \
+    docker inspect redis-$DASHED_I >/dev/null 2>&1 && { \
+        echo removing redis-$DASHED_I...; \
+        docker kill redis-$DASHED_I; \
+        docker rm redis-$DASHED_I; \
+    }; \
+\
+    echo launching redis-$DASHED_I...; \
+    docker run \
+        --name redis-$DASHED_I \
+        -e CLUSTER_NAME=$CLUSTER \
+        -e CLUSTER_HOST=$CLUSTER$DOMAIN_BASE:$PORT \
+        -e REDIS_SERVER_PORT=$REDIS_SERVER_PORT \
+        $IMAGE:$TAG \
+    & \
+    sleep 2; \
+    CONTAINER_IP=$(docker inspect --format '{{.NetworkSettings.IPAddress}}' redis-$DASHED_I 2> /dev/null); \
+    CONTAINER_PID=$(docker inspect --format '{{.State.Pid}}' redis-$DASHED_I 2> /dev/null); \
+\
+    echo preparing skydns register daemon...; \
+    while kill -0 $CONTAINER_PID 2> /dev/null; do \
+        echo updating skydns $DOMAIN_BASE_ETCD$SLASHED_I...; \
+        etcdctl set $DOMAIN_BASE_ETCD$SLASHED_I \"{\\\"host\\\":\\\"$CONTAINER_IP\\\",\\\"port\\\":$REDIS_SERVER_PORT}\" --ttl 60 >/dev/null 2>&1; \
+        sleep 45; \
+    done; \
+"
+
+ExecStopPost=-/bin/bash -ec "\
+    I=%i; \
+    DASHED_I=$(echo $I | tr ':' '-'); \
+    SLASHED_I=$(echo $I | tr ':' '/'); \
+\
+    docker inspect redis-$DASHED_I >/dev/null 2>&1 && { \
+        echo removing redis-$DASHED_I...; \
+        docker kill redis-$DASHED_I; \
+        docker rm redis-$DASHED_I; \
+    }; \
+    etcdctl rm $DOMAIN_BASE_ETCD$SLASHED_I; \
+"
