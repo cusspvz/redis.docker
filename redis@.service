@@ -33,7 +33,7 @@ ExecStart=/bin/bash -ec "\
     docker run \
         --name redis-$DASHED_I \
         -e CLUSTER_NAME=$CLUSTER \
-        -e CLUSTER_HOST=$CLUSTER$DOMAIN_BASE:$PORT \
+        -e CLUSTER_HOSTS=$CLUSTER$DOMAIN_BASE:$PORT \
         -e REDIS_SERVER_PORT=$REDIS_SERVER_PORT \
         $IMAGE:$TAG \
     & \
